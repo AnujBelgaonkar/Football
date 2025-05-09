@@ -69,21 +69,33 @@ def triangle(frame: np.ndarray, bbox: List[float], colour: Tuple[int, int, int])
     return frame 
 
 def ball_possession_box(frame_num: int, frame: np.ndarray, ball_possession: np.ndarray) -> np.ndarray:
-    overlay = frame.copy()
+    h, w = frame.shape[:2]
+    # Place box below camera movement stats (assume stats at y=0..60)
+    box_x1, box_y1 = 10, 70
+    box_x2, box_y2 = min(350, w-10), min(150, h-10)
 
-    cv2.rectangle(overlay, pt1=(1350, 850), pt2=(1900, 970), color=(255, 255, 255), thickness=cv2.FILLED)
+    overlay = frame.copy()
+    # Draw filled box (no red border)
+    cv2.rectangle(overlay, pt1=(box_x1, box_y1), pt2=(box_x2, box_y2), color=(255, 255, 255), thickness=cv2.FILLED)
     alpha = 0.4
     cv2.addWeighted(src1=overlay, alpha=alpha, src2=frame, beta=1-alpha, gamma=0, dst=frame)
+
+    # Title: 'Possession' in bold (thicker font)
+    cv2.putText(frame, text="Possession", org=(box_x1+10, box_y1+35), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=4)
 
     ball_possession_till_frame = ball_possession[:frame_num+1]
     team_1_num_frames = ball_possession_till_frame[ball_possession_till_frame==1].shape[0]
     team_2_num_frames = ball_possession_till_frame[ball_possession_till_frame==2].shape[0]
     total = team_1_num_frames + team_2_num_frames
 
-    team_1_possession = int(round(team_1_num_frames / total, 2) * 100)
-    team_2_possession = int(round(team_2_num_frames / total, 2) * 100)
+    if total > 0:
+        team_1_possession = int(round(team_1_num_frames / total, 2) * 100)
+        team_2_possession = int(round(team_2_num_frames / total, 2) * 100)
+    else:
+        team_1_possession = 0
+        team_2_possession = 0
 
-    cv2.putText(frame, text=f"Team 1: {team_1_possession}%", org=(1400, 900), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
-    cv2.putText(frame, text=f"Team 2: {team_2_possession}%", org=(1400, 950), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
+    cv2.putText(frame, text=f"Team 1: {team_1_possession}%", org=(box_x1+10, box_y1+65), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
+    cv2.putText(frame, text=f"Team 2: {team_2_possession}%", org=(box_x1+10, box_y1+105), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
 
     return frame

@@ -27,8 +27,7 @@ def process_video(data: Union[str, bytes], classes: List[int], verbose: bool=Tru
     player_assigner = PlayerBallAssigner()
     player_assigner.get_player_and_possession(tracks)
 
-    output = tracker.draw_annotations(frames, tracks, player_assigner.ball_possession)
-    output = camera_movement_estimator.draw_camera_movement(output, camera_movement_per_frame)
+    output = tracker.draw_annotations(frames, tracks, player_assigner.ball_possession, camera_movement_per_frame)
 
     save_video(output, "output/output.mp4", fps, verbose)
 

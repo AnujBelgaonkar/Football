@@ -7,6 +7,7 @@ import pandas as pd
 import ultralytics
 import supervision as sv
 from utils import ellipse, triangle, ball_possession_box, get_device, get_center_of_bbox, get_foot_position, options
+import cv2
 
 file_handler = logging.FileHandler("logs/tracking.log")
 file_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
@@ -161,12 +162,21 @@ class Tracker:
                     # add new key position
                     tracks[object][frame_num][tracker_id]["position"] = position
     
-    def draw_annotations(self, frames: List[np.ndarray], tracks: Dict[str, List[Dict]], ball_possession: np.ndarray) -> List[np.ndarray]:   
+    def draw_annotations(self, frames: List[np.ndarray], tracks: Dict[str, List[Dict]], ball_possession: np.ndarray, camera_movement_per_frame: List[List[float]]) -> List[np.ndarray]:   
         output_frames = []  # frames after changing the annotations
         num_interpolated = 0
 
         for frame_num, frame in enumerate(frames):
             frame = frame.copy()       # don't change original
+
+            # Draw camera movement box and text first (top left)
+            overlay = frame.copy()
+            cv2.rectangle(overlay, pt1=(0, 0), pt2=(500, 100), color=(255, 255, 255), thickness=cv2.FILLED)
+            alpha = 0.4
+            cv2.addWeighted(src1=overlay, alpha=alpha, src2=frame, beta=1-alpha, gamma=0, dst=frame) 
+            x_movement, y_movement = camera_movement_per_frame[frame_num]
+            frame = cv2.putText(frame, text=f"Camera Movement X: {x_movement:.2f}", org=(10, 30), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
+            frame = cv2.putText(frame, text=f"Camera Movement Y: {y_movement:.2f}", org=(10, 60), fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale=1, color=(0, 0, 0), thickness=3)
 
             player_dict = tracks["players"][frame_num]
             referee_dict = tracks["referees"][frame_num]
@@ -195,8 +205,8 @@ class Tracker:
                     if num_interpolated <= 25 or self.interpolation_tracker[frame_num] == 0:
                         frame = triangle(frame, ball["bbox"], (0, 255, 0))          # green triangle
             
-            if options["stats"] in self.classes: 
-                frame = ball_possession_box(frame_num, frame, ball_possession)
+            # Draw possession stats after camera movement
+            frame = ball_possession_box(frame_num, frame, ball_possession)
 
             output_frames.append(frame)
 
